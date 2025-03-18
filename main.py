@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pymongo import MongoClient
 from bson import ObjectId
 from typing import List, Optional
@@ -13,7 +14,16 @@ load_dotenv()
 # Initialize FastAPI app
 app = FastAPI(title="Appointments API")
 
-# MongoDB connection
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allows all origins
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all methods
+    allow_headers=["*"],  # Allows all headers
+)
+
+# MongoDB connection with error handling
 MONGODB_URI = os.getenv("MONGODB_URI")
 if not MONGODB_URI:
     raise ValueError("MONGODB_URI environment variable is not set")
@@ -24,6 +34,7 @@ try:
     client.admin.command('ping')
     db = client.appointments_db
     appointments_collection = db.appointments
+    print("Successfully connected to MongoDB")
 except Exception as e:
     print(f"Error connecting to MongoDB: {e}")
     raise
@@ -131,6 +142,11 @@ async def set_zoom_link(appointment_id: str, zoom_link: str):
         return {"message": "Zoom link added successfully"}
     except:
         raise HTTPException(status_code=404, detail="Appointment not found")
+
+# Add a health check endpoint
+@app.get("/")
+async def root():
+    return {"status": "ok", "message": "Appointments API is running"}
 
 if __name__ == "__main__":
     import uvicorn
